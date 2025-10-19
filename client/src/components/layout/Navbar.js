@@ -19,6 +19,12 @@ const Navbar = () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
+        // Check if token has the correct format (3 parts separated by dots)
+        const tokenParts = token.split('.');
+        if (tokenParts.length !== 3) {
+          throw new Error('Invalid token format');
+        }
+        
         const decoded = jwtDecode(token);
         setUser({ email: decoded.email, name: decoded.name });
       } catch (err) {
