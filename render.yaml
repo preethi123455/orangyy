@@ -1,0 +1,28 @@
+services:
+  # Backend Service
+  - type: web
+    name: orangyy-backend
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5002
+      - key: MONGO_URI
+        value: mongodb+srv://praneesh_chandran:praneesh%40773@orange-cluster.b4jao2q.mongodb.net/database1?retryWrites=true&w=majority
+      - key: JWT_SECRET
+        value: your-super-secret-jwt-key-change-this-in-production-12345
+
+  # Frontend Service
+  - type: web
+    name: orangyy-frontend
+    env: static
+    plan: free
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: ./client/build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://orangyy-backend.onrender.com
