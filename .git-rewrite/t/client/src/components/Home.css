@@ -1,0 +1,78 @@
+.logo{
+    width: 4%;
+    height: 4%;
+    display: inline-block;
+    vertical-align: text-top;
+    border-radius: 60%; 
+    margin-right: 15px;
+  }
+  .navbar {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--bs-body-tertiary);
+  }
+  :root {
+    --bs-body-tertiary: #f8f9fa;
+  }
+  .navbar{
+    padding: 10px;
+    background-color: rgb(122, 87, 155);
+  }
+.brand {
+    font-size: 1.5rem; 
+    /* font-weight: bold; */
+    color: #ffffff; 
+    text-decoration: none; 
+    align-items: center;
+    display: flex;
+    
+  }
+  .navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+  }
+  .home-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.card {
+  width: 200px; 
+  height: 290px;
+  padding: 1rem; 
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+  background-color: white; 
+  overflow: hidden; 
+  transition: transform 0.3s ease, box-shadow 0.3s ease; 
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); 
+}
+
+.card .card-title{
+font-size: 18px;
+}
+
+.card a b{
+  font-size: 15px;
+}
+.sos-btn:hover {
+    background-color: red;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  
+}
+  .sos-btn:hover {
+    background-color: darkred;
+  }
