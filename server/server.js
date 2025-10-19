@@ -1,269 +1,164 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
-const app = express();
-app.use(express.json());
-app.use(cors());
+const ProductContext = createContext();
+const API_URL = process.env.REACT_APP_API_URL; // backend URL from env
 
-// 🔹 MongoDB Connection
-const MONGO_URI = process.env.MONGO_URI || 'your-mongodb-connection-string';
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB Error:', err));
-
-// 🔹 User Schema
-const userSchema = new mongoose.Schema({
-  name: String,
-  age: Number,
-  email: { type: String, unique: true },
-  password: String,
-});
-const User = mongoose.model('User', userSchema);
-
-// 🔹 Cart Schema
-const cartSchema = new mongoose.Schema({
-  email: String,
-  name: String,
-  price: String,
-  img: String,
-  addedAt: { type: Date, default: Date.now },
-});
-const Cart = mongoose.model("Cart", cartSchema);
-
-// 🔹 Product Schema
-const productSchema = new mongoose.Schema({
-  name: String,
-  description: String,
-  price: Number,
-  image: String,
-  category: String,
-  featured: { type: Boolean, default: false },
-  inStock: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-});
-const Product = mongoose.model("Product", productSchema);
-
-// 🔹 Order Schema
-const orderSchema = new mongoose.Schema({
-  email: String,
-  name: String,
-  phone: String,
-  address: String,
-  products: Array,
-  totalCost: Number,
-  createdAt: { type: Date, default: Date.now },
-});
-const Order = mongoose.model("Order", orderSchema);
-
-// 🔹 Signup
-app.post('/signup', async (req, res) => {
-  try {
-    const { name, age, email, password } = req.body;
-    if (!name || !age || !email || !password) return res.status(400).json({ message: 'All fields are required' });
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: 'User already exists' });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, age, email, password: hashedPassword });
-    await newUser.save();
-
-    res.status(201).json({ message: '✅ Signup successful' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Signup failed' });
+const initialState = {
+  products: [],
+  featuredProducts: [],
+  categories: [],
+  loading: false,
+  error: null,
+  currentProduct: null,
+  searchQuery: '',
+  filters: {
+    category: 'all',
+    minPrice: '',
+    maxPrice: '',
+    sortBy: 'createdAt',
+    sortOrder: 'desc'
+  },
+  pagination: {
+    currentPage: 1,
+    totalPages: 1,
+    total: 0,
+    limit: 12
   }
-});
+};
 
-// 🔹 Login
-app.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Email and password required' });
-
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: '❌ Invalid credentials' });
-
-    const token = jwt.sign({ id: user._id, email: user.email, name: user.name }, process.env.JWT_SECRET || 'MY_SECRET', { expiresIn: '2h' });
-    res.status(200).json({ success: true, message: '✅ Login successful', token });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Login failed' });
+const productReducer = (state, action) => {
+  switch (action.type) {
+    case 'FETCH_PRODUCTS_START':
+      return { ...state, loading: true, error: null };
+    case 'FETCH_PRODUCTS_SUCCESS':
+      return {
+        ...state,
+        products: action.payload.products,
+        pagination: {
+          currentPage: action.payload.currentPage,
+          totalPages: action.payload.totalPages,
+          total: action.payload.total,
+          limit: action.payload.limit || 12
+        },
+        loading: false,
+        error: null
+      };
+    case 'FETCH_PRODUCTS_FAILURE':
+      return { ...state, products: [], loading: false, error: action.payload };
+    case 'FETCH_FEATURED_SUCCESS':
+      return { ...state, featuredProducts: action.payload, loading: false, error: null };
+    case 'FETCH_CATEGORIES_SUCCESS':
+      return { ...state, categories: action.payload };
+    case 'FETCH_PRODUCT_SUCCESS':
+      return { ...state, currentProduct: action.payload, loading: false, error: null };
+    case 'SET_SEARCH_QUERY':
+      return { ...state, searchQuery: action.payload };
+    case 'SET_FILTERS':
+      return { ...state, filters: { ...state.filters, ...action.payload } };
+    case 'CLEAR_FILTERS':
+      return {
+        ...state,
+        filters: { category: 'all', minPrice: '', maxPrice: '', sortBy: 'createdAt', sortOrder: 'desc' },
+        searchQuery: ''
+      };
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
+    default:
+      return state;
   }
-});
+};
 
-// 🔹 Get Logged-in User Info
-app.get('/api/me', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+export const ProductProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(productReducer, initialState);
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'MY_SECRET');
-    const user = await User.findById(decoded.id).select('-password');
-    res.json(user);
-  } catch (err) {
-    res.status(401).json({ message: 'Invalid token' });
-  }
-});
+  // Fetch products with filters
+  const fetchProducts = async (page = 1, customFilters = {}) => {
+    dispatch({ type: 'FETCH_PRODUCTS_START' });
+    try {
+      const params = { page, limit: state.pagination.limit, ...state.filters, ...customFilters };
+      Object.keys(params).forEach(key => {
+        if (params[key] === '' || params[key] === 'all') delete params[key];
+      });
 
-// 🔹 Cart and Orders (same as before)
-app.post('/cart/add', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ message: 'No token provided' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'MY_SECRET');
-    const email = decoded.email;
+      const res = await axios.get(`${API_URL}/api/products`, { params });
+      dispatch({ type: 'FETCH_PRODUCTS_SUCCESS', payload: res.data });
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to fetch products';
+      dispatch({ type: 'FETCH_PRODUCTS_FAILURE', payload: message });
+      toast.error(message);
+    }
+  };
 
-    const { name, price, img } = req.body;
-    if (!name || !price || !img) return res.status(400).json({ message: 'Missing product data' });
+  // Featured products
+  const fetchFeaturedProducts = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/products`, { params: { featured: 'true', limit: 8 } });
+      dispatch({ type: 'FETCH_FEATURED_SUCCESS', payload: res.data.products });
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      toast.error('Failed to fetch featured products');
+    }
+  };
 
-    const cartItem = new Cart({ email, name, price, img });
-    await cartItem.save();
+  // Categories
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/products/categories/list`);
+      dispatch({ type: 'FETCH_CATEGORIES_SUCCESS', payload: res.data });
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Failed to fetch categories');
+    }
+  };
 
-    res.status(201).json({ message: '✅ Added to cart successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error adding to cart' });
-  }
-});
+  // Single product
+  const fetchProduct = async (id) => {
+    dispatch({ type: 'FETCH_PRODUCTS_START' });
+    try {
+      const res = await axios.get(`${API_URL}/api/products/${id}`);
+      dispatch({ type: 'FETCH_PRODUCT_SUCCESS', payload: res.data });
+    } catch (error) {
+      const message = error.response?.data?.message || 'Product not found';
+      dispatch({ type: 'FETCH_PRODUCTS_FAILURE', payload: message });
+      toast.error(message);
+    }
+  };
 
-app.get('/cart', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'MY_SECRET');
-    const email = decoded.email;
+  const setSearchQuery = (query) => dispatch({ type: 'SET_SEARCH_QUERY', payload: query });
+  const setFilters = (filters) => dispatch({ type: 'SET_FILTERS', payload: filters });
+  const clearFilters = () => dispatch({ type: 'CLEAR_FILTERS' });
+  const clearError = () => dispatch({ type: 'CLEAR_ERROR' });
 
-    const items = await Cart.find({ email });
-    const grouped = {};
-    items.forEach(item => {
-      if (!grouped[item.name]) grouped[item.name] = { ...item._doc, quantity: 1 };
-      else grouped[item.name].quantity += 1;
-    });
+  // Load featured products and categories on mount
+  useEffect(() => {
+    fetchFeaturedProducts();
+    fetchCategories();
+  }, []);
 
-    res.json(Object.values(grouped));
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching cart items' });
-  }
-});
+  // Refetch products when filters or search query change
+  useEffect(() => {
+    fetchProducts(1);
+  }, [state.filters, state.searchQuery]);
 
-app.post('/orders', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'MY_SECRET');
-    const email = decoded.email;
+  const value = {
+    ...state,
+    fetchProducts,
+    fetchFeaturedProducts,
+    fetchCategories,
+    fetchProduct,
+    setSearchQuery,
+    setFilters,
+    clearFilters,
+    clearError
+  };
 
-    const { name, phone, address, products, totalCost } = req.body;
-    if (!name || !phone || !address || !products || products.length === 0) return res.status(400).json({ message: 'Missing order data' });
+  return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
+};
 
-    const newOrder = new Order({ email, name, phone, address, products, totalCost });
-    await newOrder.save();
-
-    await Cart.deleteMany({ email }); // clear cart
-    res.json({ message: '✅ Order placed successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to place order' });
-  }
-});
-
-// 🔹 Products API
-app.get('/api/products', async (req, res) => {
-  try {
-    const { page = 1, limit = 12, category, featured, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    
-    let query = {};
-    if (category && category !== 'all') query.category = category;
-    if (featured === 'true') query.featured = true;
-    
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
-    
-    const products = await Product.find(query)
-      .sort(sort)
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-    
-    const total = await Product.countDocuments(query);
-    
-    res.json({
-      products,
-      currentPage: parseInt(page),
-      totalPages: Math.ceil(total / limit),
-      total,
-      limit: parseInt(limit)
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching products' });
-  }
-});
-
-app.get('/api/products/:id', async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Product not found' });
-    res.json(product);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching product' });
-  }
-});
-
-app.get('/api/products/categories/list', async (req, res) => {
-  try {
-    const categories = await Product.distinct('category');
-    res.json(categories);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching categories' });
-  }
-});
-
-// 🔹 Seed some sample products
-app.post('/api/products/seed', async (req, res) => {
-  try {
-    const sampleProducts = [
-      {
-        name: "Fresh Orange Juice",
-        description: "100% pure orange juice, freshly squeezed",
-        price: 4.99,
-        image: "/images/orange-juice-1.jpg",
-        category: "Juices",
-        featured: true
-      },
-      {
-        name: "Premium Orange Juice",
-        description: "Premium quality orange juice with pulp",
-        price: 6.99,
-        image: "/images/orange-juice-2.jpg",
-        category: "Juices",
-        featured: true
-      },
-      {
-        name: "Organic Orange Juice",
-        description: "Organic, no preservatives added",
-        price: 7.99,
-        image: "/images/orange-juice-3.jpg",
-        category: "Organic",
-        featured: false
-      }
-    ];
-    
-    await Product.insertMany(sampleProducts);
-    res.json({ message: 'Sample products added successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error seeding products' });
-  }
-});
-
-const PORT = process.env.PORT || 5002;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+export const useProducts = () => {
+  const context = useContext(ProductContext);
+  if (!context) throw new Error('useProducts must be used within a ProductProvider');
+  return context;
+};

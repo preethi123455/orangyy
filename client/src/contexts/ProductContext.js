@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 
 const ProductContext = createContext();
 
+const API_URL = process.env.REACT_APP_API_URL; // Backend URL from .env
+
 const initialState = {
   products: [],
   featuredProducts: [],
@@ -30,11 +32,7 @@ const initialState = {
 const productReducer = (state, action) => {
   switch (action.type) {
     case 'FETCH_PRODUCTS_START':
-      return {
-        ...state,
-        loading: true,
-        error: null
-      };
+      return { ...state, loading: true, error: null };
     case 'FETCH_PRODUCTS_SUCCESS':
       return {
         ...state,
@@ -49,58 +47,25 @@ const productReducer = (state, action) => {
         error: null
       };
     case 'FETCH_PRODUCTS_FAILURE':
-      return {
-        ...state,
-        products: [],
-        loading: false,
-        error: action.payload
-      };
+      return { ...state, products: [], loading: false, error: action.payload };
     case 'FETCH_FEATURED_SUCCESS':
-      return {
-        ...state,
-        featuredProducts: action.payload,
-        loading: false,
-        error: null
-      };
+      return { ...state, featuredProducts: action.payload, loading: false, error: null };
     case 'FETCH_CATEGORIES_SUCCESS':
-      return {
-        ...state,
-        categories: action.payload
-      };
+      return { ...state, categories: action.payload };
     case 'FETCH_PRODUCT_SUCCESS':
-      return {
-        ...state,
-        currentProduct: action.payload,
-        loading: false,
-        error: null
-      };
+      return { ...state, currentProduct: action.payload, loading: false, error: null };
     case 'SET_SEARCH_QUERY':
-      return {
-        ...state,
-        searchQuery: action.payload
-      };
+      return { ...state, searchQuery: action.payload };
     case 'SET_FILTERS':
-      return {
-        ...state,
-        filters: { ...state.filters, ...action.payload }
-      };
+      return { ...state, filters: { ...state.filters, ...action.payload } };
     case 'CLEAR_FILTERS':
       return {
         ...state,
-        filters: {
-          category: 'all',
-          minPrice: '',
-          maxPrice: '',
-          sortBy: 'createdAt',
-          sortOrder: 'desc'
-        },
+        filters: { category: 'all', minPrice: '', maxPrice: '', sortBy: 'createdAt', sortOrder: 'desc' },
         searchQuery: ''
       };
     case 'CLEAR_ERROR':
-      return {
-        ...state,
-        error: null
-      };
+      return { ...state, error: null };
     default:
       return state;
   }
@@ -109,9 +74,9 @@ const productReducer = (state, action) => {
 export const ProductProvider = ({ children }) => {
   const [state, dispatch] = useReducer(productReducer, initialState);
 
+  // Fetch products with filters and pagination
   const fetchProducts = async (page = 1, customFilters = {}) => {
     dispatch({ type: 'FETCH_PRODUCTS_START' });
-    
     try {
       const params = {
         page,
@@ -120,19 +85,13 @@ export const ProductProvider = ({ children }) => {
         ...customFilters
       };
 
-      // Remove empty values
+      // Remove empty or 'all' values
       Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === 'all') {
-          delete params[key];
-        }
+        if (params[key] === '' || params[key] === 'all') delete params[key];
       });
 
-      const res = await axios.get('/api/products', { params });
-      
-      dispatch({
-        type: 'FETCH_PRODUCTS_SUCCESS',
-        payload: res.data
-      });
+      const res = await axios.get(`${API_URL}/api/products`, { params });
+      dispatch({ type: 'FETCH_PRODUCTS_SUCCESS', payload: res.data });
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to fetch products';
       dispatch({ type: 'FETCH_PRODUCTS_FAILURE', payload: message });
@@ -140,43 +99,36 @@ export const ProductProvider = ({ children }) => {
     }
   };
 
+  // Fetch featured products
   const fetchFeaturedProducts = async () => {
     try {
-      const res = await axios.get('/api/products', {
+      const res = await axios.get(`${API_URL}/api/products`, {
         params: { featured: 'true', limit: 8 }
       });
-      
-      dispatch({
-        type: 'FETCH_FEATURED_SUCCESS',
-        payload: res.data.products
-      });
+      dispatch({ type: 'FETCH_FEATURED_SUCCESS', payload: res.data.products });
     } catch (error) {
       console.error('Error fetching featured products:', error);
+      toast.error('Failed to fetch featured products');
     }
   };
 
+  // Fetch categories
   const fetchCategories = async () => {
     try {
-      const res = await axios.get('/api/products/categories/list');
-      dispatch({
-        type: 'FETCH_CATEGORIES_SUCCESS',
-        payload: res.data
-      });
+      const res = await axios.get(`${API_URL}/api/products/categories/list`);
+      dispatch({ type: 'FETCH_CATEGORIES_SUCCESS', payload: res.data });
     } catch (error) {
       console.error('Error fetching categories:', error);
+      toast.error('Failed to fetch categories');
     }
   };
 
+  // Fetch single product by ID
   const fetchProduct = async (id) => {
     dispatch({ type: 'FETCH_PRODUCTS_START' });
-    
     try {
-      const res = await axios.get(`/api/products/${id}`);
-      
-      dispatch({
-        type: 'FETCH_PRODUCT_SUCCESS',
-        payload: res.data
-      });
+      const res = await axios.get(`${API_URL}/api/products/${id}`);
+      dispatch({ type: 'FETCH_PRODUCT_SUCCESS', payload: res.data });
     } catch (error) {
       const message = error.response?.data?.message || 'Product not found';
       dispatch({ type: 'FETCH_PRODUCTS_FAILURE', payload: message });
@@ -184,21 +136,10 @@ export const ProductProvider = ({ children }) => {
     }
   };
 
-  const setSearchQuery = (query) => {
-    dispatch({ type: 'SET_SEARCH_QUERY', payload: query });
-  };
-
-  const setFilters = (filters) => {
-    dispatch({ type: 'SET_FILTERS', payload: filters });
-  };
-
-  const clearFilters = () => {
-    dispatch({ type: 'CLEAR_FILTERS' });
-  };
-
-  const clearError = () => {
-    dispatch({ type: 'CLEAR_ERROR' });
-  };
+  const setSearchQuery = (query) => dispatch({ type: 'SET_SEARCH_QUERY', payload: query });
+  const setFilters = (filters) => dispatch({ type: 'SET_FILTERS', payload: filters });
+  const clearFilters = () => dispatch({ type: 'CLEAR_FILTERS' });
+  const clearError = () => dispatch({ type: 'CLEAR_ERROR' });
 
   // Load featured products and categories on mount
   useEffect(() => {
@@ -206,7 +147,7 @@ export const ProductProvider = ({ children }) => {
     fetchCategories();
   }, []);
 
-  // Fetch products when filters change
+  // Refetch products when filters or search query change
   useEffect(() => {
     fetchProducts(1);
   }, [state.filters, state.searchQuery]);
@@ -223,17 +164,11 @@ export const ProductProvider = ({ children }) => {
     clearError
   };
 
-  return (
-    <ProductContext.Provider value={value}>
-      {children}
-    </ProductContext.Provider>
-  );
+  return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
 };
 
 export const useProducts = () => {
   const context = useContext(ProductContext);
-  if (!context) {
-    throw new Error('useProducts must be used within a ProductProvider');
-  }
+  if (!context) throw new Error('useProducts must be used within a ProductProvider');
   return context;
 };
