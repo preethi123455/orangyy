@@ -34,6 +34,19 @@ const cartSchema = new mongoose.Schema({
 });
 const Cart = mongoose.model("Cart", cartSchema);
 
+// 🔹 Product Schema
+const productSchema = new mongoose.Schema({
+  name: String,
+  description: String,
+  price: Number,
+  image: String,
+  category: String,
+  featured: { type: Boolean, default: false },
+  inStock: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+});
+const Product = mongoose.model("Product", productSchema);
+
 // 🔹 Order Schema
 const orderSchema = new mongoose.Schema({
   email: String,
@@ -158,6 +171,97 @@ app.post('/orders', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to place order' });
+  }
+});
+
+// 🔹 Products API
+app.get('/api/products', async (req, res) => {
+  try {
+    const { page = 1, limit = 12, category, featured, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    
+    let query = {};
+    if (category && category !== 'all') query.category = category;
+    if (featured === 'true') query.featured = true;
+    
+    const sort = {};
+    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    
+    const products = await Product.find(query)
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    
+    const total = await Product.countDocuments(query);
+    
+    res.json({
+      products,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(total / limit),
+      total,
+      limit: parseInt(limit)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching products' });
+  }
+});
+
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching product' });
+  }
+});
+
+app.get('/api/products/categories/list', async (req, res) => {
+  try {
+    const categories = await Product.distinct('category');
+    res.json(categories);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching categories' });
+  }
+});
+
+// 🔹 Seed some sample products
+app.post('/api/products/seed', async (req, res) => {
+  try {
+    const sampleProducts = [
+      {
+        name: "Fresh Orange Juice",
+        description: "100% pure orange juice, freshly squeezed",
+        price: 4.99,
+        image: "/images/orange-juice-1.jpg",
+        category: "Juices",
+        featured: true
+      },
+      {
+        name: "Premium Orange Juice",
+        description: "Premium quality orange juice with pulp",
+        price: 6.99,
+        image: "/images/orange-juice-2.jpg",
+        category: "Juices",
+        featured: true
+      },
+      {
+        name: "Organic Orange Juice",
+        description: "Organic, no preservatives added",
+        price: 7.99,
+        image: "/images/orange-juice-3.jpg",
+        category: "Organic",
+        featured: false
+      }
+    ];
+    
+    await Product.insertMany(sampleProducts);
+    res.json({ message: 'Sample products added successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error seeding products' });
   }
 });
 
