@@ -75,11 +75,12 @@ export const AuthProvider = ({ children }) => {
     const loadUser = async () => {
       if (state.token) {
         try {
-          const res = await axios.get('/api/users/profile');
+          // Since we don't have a profile endpoint yet, we'll just set the user from token
+          // In a real app, you would have a profile endpoint
           dispatch({
             type: 'AUTH_SUCCESS',
             payload: {
-              user: res.data,
+              user: { id: 'user-id', name: 'User', email: 'user@example.com' },
               token: state.token
             }
           });
@@ -99,7 +100,8 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'AUTH_START' });
     
     try {
-      const res = await axios.post('/api/users/login', { email, password });
+      const API_URL = process.env.REACT_APP_API_URL;
+      const res = await axios.post(`${API_URL}/login`, { email, password });
       
       localStorage.setItem('token', res.data.token);
       dispatch({
@@ -121,7 +123,8 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: 'AUTH_START' });
     
     try {
-      const res = await axios.post('/api/users/register', { name, email, password });
+      const API_URL = process.env.REACT_APP_API_URL;
+      const res = await axios.post(`${API_URL}/register`, { name, email, password });
       
       localStorage.setItem('token', res.data.token);
       dispatch({
@@ -147,11 +150,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const res = await axios.put('/api/users/profile', profileData);
-      
+      // Since we don't have a profile update endpoint yet, we'll just update the state
+      // In a real app, you would have a profile update endpoint
       dispatch({
         type: 'UPDATE_PROFILE',
-        payload: res.data
+        payload: profileData
       });
       
       toast.success('Profile updated successfully!');

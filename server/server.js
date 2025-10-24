@@ -1,164 +1,203 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import axios from 'axios';
-import toast from 'react-hot-toast';
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const path = require('path');
+require('dotenv').config();
 
-const ProductContext = createContext();
-const API_URL = process.env.REACT_APP_API_URL; // backend URL from env
+const app = express();
+const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/orangyy';
 
-const initialState = {
-  products: [],
-  featuredProducts: [],
-  categories: [],
-  loading: false,
-  error: null,
-  currentProduct: null,
-  searchQuery: '',
-  filters: {
-    category: 'all',
-    minPrice: '',
-    maxPrice: '',
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
-  },
-  pagination: {
-    currentPage: 1,
-    totalPages: 1,
-    total: 0,
-    limit: 12
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Connect to MongoDB
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// User Schema
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model('User', userSchema);
+
+// Product Schema
+const productSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String, required: true },
+  price: { type: Number, required: true },
+  image: { type: String, required: true },
+  category: { type: String, required: true },
+  featured: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Product = mongoose.model('Product', productSchema);
+
+// Auth Routes
+app.post('/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Create new user
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword
+    });
+    
+    await user.save();
+    
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1d' });
+    
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    
+    // Validate password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1d' });
+    
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Auth middleware
+const auth = (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
+    }
+    
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Token is not valid' });
   }
 };
 
-const productReducer = (state, action) => {
-  switch (action.type) {
-    case 'FETCH_PRODUCTS_START':
-      return { ...state, loading: true, error: null };
-    case 'FETCH_PRODUCTS_SUCCESS':
-      return {
-        ...state,
-        products: action.payload.products,
-        pagination: {
-          currentPage: action.payload.currentPage,
-          totalPages: action.payload.totalPages,
-          total: action.payload.total,
-          limit: action.payload.limit || 12
-        },
-        loading: false,
-        error: null
-      };
-    case 'FETCH_PRODUCTS_FAILURE':
-      return { ...state, products: [], loading: false, error: action.payload };
-    case 'FETCH_FEATURED_SUCCESS':
-      return { ...state, featuredProducts: action.payload, loading: false, error: null };
-    case 'FETCH_CATEGORIES_SUCCESS':
-      return { ...state, categories: action.payload };
-    case 'FETCH_PRODUCT_SUCCESS':
-      return { ...state, currentProduct: action.payload, loading: false, error: null };
-    case 'SET_SEARCH_QUERY':
-      return { ...state, searchQuery: action.payload };
-    case 'SET_FILTERS':
-      return { ...state, filters: { ...state.filters, ...action.payload } };
-    case 'CLEAR_FILTERS':
-      return {
-        ...state,
-        filters: { category: 'all', minPrice: '', maxPrice: '', sortBy: 'createdAt', sortOrder: 'desc' },
-        searchQuery: ''
-      };
-    case 'CLEAR_ERROR':
-      return { ...state, error: null };
-    default:
-      return state;
+// Product Routes
+app.get('/api/products', async (req, res) => {
+  try {
+    const { page = 1, limit = 12, category, minPrice, maxPrice, sortBy = 'createdAt', sortOrder = 'desc', featured } = req.query;
+    
+    const query = {};
+    if (category && category !== 'all') query.category = category;
+    if (minPrice) query.price = { ...query.price, $gte: Number(minPrice) };
+    if (maxPrice) query.price = { ...query.price, $lte: Number(maxPrice) };
+    if (featured) query.featured = featured === 'true';
+    
+    const total = await Product.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+    
+    const products = await Product.find(query)
+      .sort({ [sortBy]: sortOrder === 'desc' ? -1 : 1 })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+    
+    res.json({
+      products,
+      currentPage: Number(page),
+      totalPages,
+      total
+    });
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ message: 'Server error' });
   }
-};
+});
 
-export const ProductProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(productReducer, initialState);
+app.get('/api/products/categories/list', async (req, res) => {
+  try {
+    const categories = await Product.distinct('category');
+    res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-  // Fetch products with filters
-  const fetchProducts = async (page = 1, customFilters = {}) => {
-    dispatch({ type: 'FETCH_PRODUCTS_START' });
-    try {
-      const params = { page, limit: state.pagination.limit, ...state.filters, ...customFilters };
-      Object.keys(params).forEach(key => {
-        if (params[key] === '' || params[key] === 'all') delete params[key];
-      });
-
-      const res = await axios.get(`${API_URL}/api/products`, { params });
-      dispatch({ type: 'FETCH_PRODUCTS_SUCCESS', payload: res.data });
-    } catch (error) {
-      const message = error.response?.data?.message || 'Failed to fetch products';
-      dispatch({ type: 'FETCH_PRODUCTS_FAILURE', payload: message });
-      toast.error(message);
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
     }
-  };
+    res.json(product);
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-  // Featured products
-  const fetchFeaturedProducts = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/api/products`, { params: { featured: 'true', limit: 8 } });
-      dispatch({ type: 'FETCH_FEATURED_SUCCESS', payload: res.data.products });
-    } catch (error) {
-      console.error('Error fetching featured products:', error);
-      toast.error('Failed to fetch featured products');
-    }
-  };
+// Serve static assets in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/build')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
+  });
+}
 
-  // Categories
-  const fetchCategories = async () => {
-    try {
-      const res = await axios.get(`${API_URL}/api/products/categories/list`);
-      dispatch({ type: 'FETCH_CATEGORIES_SUCCESS', payload: res.data });
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toast.error('Failed to fetch categories');
-    }
-  };
-
-  // Single product
-  const fetchProduct = async (id) => {
-    dispatch({ type: 'FETCH_PRODUCTS_START' });
-    try {
-      const res = await axios.get(`${API_URL}/api/products/${id}`);
-      dispatch({ type: 'FETCH_PRODUCT_SUCCESS', payload: res.data });
-    } catch (error) {
-      const message = error.response?.data?.message || 'Product not found';
-      dispatch({ type: 'FETCH_PRODUCTS_FAILURE', payload: message });
-      toast.error(message);
-    }
-  };
-
-  const setSearchQuery = (query) => dispatch({ type: 'SET_SEARCH_QUERY', payload: query });
-  const setFilters = (filters) => dispatch({ type: 'SET_FILTERS', payload: filters });
-  const clearFilters = () => dispatch({ type: 'CLEAR_FILTERS' });
-  const clearError = () => dispatch({ type: 'CLEAR_ERROR' });
-
-  // Load featured products and categories on mount
-  useEffect(() => {
-    fetchFeaturedProducts();
-    fetchCategories();
-  }, []);
-
-  // Refetch products when filters or search query change
-  useEffect(() => {
-    fetchProducts(1);
-  }, [state.filters, state.searchQuery]);
-
-  const value = {
-    ...state,
-    fetchProducts,
-    fetchFeaturedProducts,
-    fetchCategories,
-    fetchProduct,
-    setSearchQuery,
-    setFilters,
-    clearFilters,
-    clearError
-  };
-
-  return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
-};
-
-export const useProducts = () => {
-  const context = useContext(ProductContext);
-  if (!context) throw new Error('useProducts must be used within a ProductProvider');
-  return context;
-};
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
