@@ -18,13 +18,13 @@ services:
         value: your-super-secret-jwt-key-change-this-in-production-12345
 
   # Frontend Service
-  - type: web
+  - type: static_site
     name: orangyy-frontend
     env: static
     plan: free
     rootDir: client
     buildCommand: npm install && npm run build
-    staticPublishPath: ./build
+    publishDir: build
     envVars:
       - key: REACT_APP_API_URL
         value: https://orangyy-backend.onrender.com
