@@ -132,12 +132,16 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', res.data.token);
       dispatch({
         type: 'AUTH_SUCCESS',
-        payload: res.data
+        payload: {
+          user: res.data.user,
+          token: res.data.token
+        }
       });
       
       toast.success('Registration successful!');
       return { success: true };
     } catch (error) {
+      console.error('Registration error:', error);
       const message = error.response?.data?.message || 'Registration failed';
       dispatch({ type: 'AUTH_FAILURE', payload: message });
       toast.error(message);
@@ -175,6 +179,7 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     ...state,
+    isAuthenticated: !!state.token,
     login,
     register,
     logout,
