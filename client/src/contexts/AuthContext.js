@@ -117,23 +117,7 @@ export const AuthProvider = ({ children }) => {
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
       dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
       toast.error(errorMessage);
-      throw new Error(errorMessage);
-    }
-
-      
-      localStorage.setItem('token', res.data.token);
-      dispatch({
-        type: 'AUTH_SUCCESS',
-        payload: res.data
-      });
-      
-      toast.success('Login successful!');
-      return { success: true };
-    } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
-      dispatch({ type: 'AUTH_FAILURE', payload: message });
-      toast.error(message);
-      return { success: false, error: message };
+      return { success: false, error: errorMessage };
     }
   };
 
