@@ -54,248 +54,152 @@ const Register = () => {
   };
 
   return (
-    <div className="register-page">
-      <div className="register-container">
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-orange-50 to-orange-100">
+      <div className="w-full max-w-md px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="register-card"
+          transition={{ duration: 0.5 }}
+          className="bg-white p-8 rounded-xl shadow-2xl border-t-4 border-orange-500"
         >
-          <div className="register-header">
-            <h1>Create Account</h1>
-            <p>Join us for the best orange juice experience</p>
+          <div className="flex justify-center mb-6">
+            <img src="/logo192.png" alt="Orange Store" className="h-16 w-16" />
+          </div>
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-orange-600">Create Account</h1>
+            <p className="text-gray-500 mt-2">Join us for the best orange experience</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="register-form">
-            <div className="form-group">
-              <label htmlFor="name" className="form-label">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                 Full Name
               </label>
-              <div className="input-container">
-                <FaUser className="input-icon" />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaUser className="text-orange-400" />
+                </div>
                 <input
                   type="text"
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="form-control"
+                  className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
                   placeholder="Enter your full name"
                   required
                 />
               </div>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
+            
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email Address
               </label>
-              <div className="input-container">
-                <FaEnvelope className="input-icon" />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaEnvelope className="text-orange-400" />
+                </div>
                 <input
                   type="email"
                   id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="form-control"
-                  placeholder="Enter your email"
+                  className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
+                  placeholder="Enter your email address"
                   required
                 />
               </div>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
+            
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <div className="input-container">
-                <FaLock className="input-icon" />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaLock className="text-orange-400" />
+                </div>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   id="password"
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="form-control"
+                  className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
                   placeholder="Create a password"
                   required
                 />
-                <button
-                  type="button"
-                  className="password-toggle"
+                <div 
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
+                  {showPassword ? <FaEyeSlash className="text-gray-500" /> : <FaEye className="text-gray-500" />}
+                </div>
               </div>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="confirmPassword" className="form-label">
+            
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
                 Confirm Password
               </label>
-              <div className="input-container">
-                <FaLock className="input-icon" />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FaLock className="text-orange-400" />
+                </div>
                 <input
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? "text" : "password"}
                   id="confirmPassword"
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="form-control"
+                  className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
                   placeholder="Confirm your password"
                   required
                 />
-                <button
-                  type="button"
-                  className="password-toggle"
+                <div 
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
+                  {showConfirmPassword ? <FaEyeSlash className="text-gray-500" /> : <FaEye className="text-gray-500" />}
+                </div>
               </div>
             </div>
 
-            <button
+            <motion.button
               type="submit"
               disabled={isLoading}
-              className="btn btn-primary btn-large w-full"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 transition-all duration-200"
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
-            </button>
+              {isLoading ? (
+                <div className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Creating Account...</span>
+                </div>
+              ) : (
+                <>
+                  Create Account
+                </>
+              )}
+            </motion.button>
           </form>
 
-          <div className="register-footer">
-            <p>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="link">
-                Sign in here
+              <Link to="/login" className="font-medium text-orange-600 hover:text-orange-800 transition-colors duration-200">
+                Sign in
               </Link>
             </p>
           </div>
         </motion.div>
       </div>
-
-      <style jsx>{`
-        .register-page {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-          padding: 2rem 1rem;
-        }
-
-        .register-container {
-          width: 100%;
-          max-width: 400px;
-        }
-
-        .register-card {
-          background: white;
-          border-radius: 20px;
-          padding: 2.5rem;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        }
-
-        .register-header {
-          text-align: center;
-          margin-bottom: 2rem;
-        }
-
-        .register-header h1 {
-          font-size: 2rem;
-          color: var(--text-dark);
-          margin-bottom: 0.5rem;
-          font-family: var(--font-display);
-        }
-
-        .register-header p {
-          color: var(--text-light);
-        }
-
-        .register-form {
-          margin-bottom: 2rem;
-        }
-
-        .form-group {
-          margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-          display: block;
-          margin-bottom: 0.5rem;
-          font-weight: 500;
-          color: var(--text-dark);
-        }
-
-        .input-container {
-          position: relative;
-        }
-
-        .input-icon {
-          position: absolute;
-          left: 1rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: var(--text-light);
-          z-index: 2;
-        }
-
-        .form-control {
-          width: 100%;
-          padding: 1rem 1rem 1rem 3rem;
-          border: 2px solid #e1e8ed;
-          border-radius: 10px;
-          font-size: 1rem;
-          transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-          outline: none;
-          border-color: var(--primary-orange);
-          box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
-        }
-
-        .password-toggle {
-          position: absolute;
-          right: 1rem;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          color: var(--text-light);
-          cursor: pointer;
-          z-index: 2;
-        }
-
-        .password-toggle:hover {
-          color: var(--primary-orange);
-        }
-
-        .register-footer {
-          text-align: center;
-        }
-
-        .register-footer p {
-          color: var(--text-light);
-        }
-
-        .link {
-          color: var(--primary-orange);
-          text-decoration: none;
-          font-weight: 500;
-        }
-
-        .link:hover {
-          text-decoration: underline;
-        }
-
-        .w-full {
-          width: 100%;
-        }
-      `}</style>
     </div>
   );
 };
