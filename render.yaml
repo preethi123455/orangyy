@@ -4,8 +4,9 @@ services:
     name: orangyy-backend
     env: node
     plan: free
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,8 +22,9 @@ services:
     name: orangyy-frontend
     env: static
     plan: free
-    buildCommand: cd client && npm install && npm run build
-    staticPublishPath: ./client/build
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./build
     envVars:
       - key: REACT_APP_API_URL
         value: https://orangyy-backend.onrender.com
