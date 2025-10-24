@@ -99,9 +99,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     dispatch({ type: 'AUTH_START' });
     try {
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, { email, password });
+      const API_URL = process.env.REACT_APP_API_URL;
+      const res = await axios.post(`${API_URL}/login`, { email, password });
       
-      
+      localStorage.setItem('token', res.data.token);
       dispatch({
         type: 'AUTH_SUCCESS',
         payload: {
@@ -111,7 +112,7 @@ export const AuthProvider = ({ children }) => {
       });
       
       toast.success('Login successful!');
-      return res.data;
+      return { success: true, data: res.data };
     } catch (error) {
       console.error('Login error:', error);
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
